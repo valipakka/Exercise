@@ -9,25 +9,22 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.sql.init.SqlDataSourceScriptDatabaseInitializer;
 import org.springframework.boot.autoconfigure.sql.init.SqlInitializationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
-/**
- * The entry point of the Spring Boot application.
- *
- * Use the @PWA annotation make the application installable on phones, tablets
- * and some desktop browsers.
- *
- */
 @SpringBootApplication
-@Theme(value = "exercise")
 public class Application implements AppShellConfigurator {
 
     public static void main(String[] args) {
         SpringApplication.run(Application.class, args);
     }
+
     @Bean
-    SqlDataSourceScriptDatabaseInitializer dataSourceScriptDatabaseInitializer(DataSource dataSource,
-            SqlInitializationProperties properties, SamplePersonRepository repository) {
-        // This bean ensures the database is only initialized when empty
+    SqlDataSourceScriptDatabaseInitializer dataSourceScriptDatabaseInitializer(
+            DataSource dataSource,
+            SqlInitializationProperties properties,
+            SamplePersonRepository repository) {
+        // Tämä varmistaa, että skriptit ajaa vain, jos taulu on tyhjä
         return new SqlDataSourceScriptDatabaseInitializer(dataSource, properties) {
             @Override
             public boolean initializeDatabase() {
@@ -37,5 +34,14 @@ public class Application implements AppShellConfigurator {
                 return false;
             }
         };
+    }
+
+    /**
+     * PasswordEncoder-bean, jota voi injektoida
+     * esim. siemen-komponenttiin ja signup-lomakkeeseen.
+     */
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 }

@@ -2,6 +2,12 @@ package com.example.application.data;
 
 import jakarta.persistence.Entity;
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.ManyToOne;
 
 @Entity
 public class Exercises extends AbstractEntity {
@@ -11,6 +17,12 @@ public class Exercises extends AbstractEntity {
     private String type;
     private Integer distance;
     private String notes;
+
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "owner_id")
+    private User owner;
+
+
 
     public LocalDateTime getStartTime() {
         return startTime;
@@ -41,6 +53,13 @@ public class Exercises extends AbstractEntity {
     }
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    public User getOwner() {
+        return owner;
+    }
+    public void setOwner(User owner) {
+        this.owner = owner;
     }
 
 }

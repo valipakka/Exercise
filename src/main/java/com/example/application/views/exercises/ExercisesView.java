@@ -1,7 +1,9 @@
+
 package com.example.application.views.exercises;
 
 import com.example.application.data.Exercises;
 import com.example.application.services.ExercisesService;
+import com.example.application.views.MainLayout;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -9,96 +11,217 @@ import com.vaadin.flow.component.datetimepicker.DateTimePicker;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.GridVariant;
+import com.vaadin.flow.component.grid.HeaderRow;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.Notification.Position;
 import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
-import com.vaadin.flow.component.splitlayout.SplitLayout;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.binder.BeanValidationBinder;
-import com.vaadin.flow.data.binder.ValidationException;
-import com.vaadin.flow.data.converter.StringToIntegerConverter;
+import com.vaadin.flow.data.provider.DataProvider;
+import com.vaadin.flow.data.provider.ListDataProvider;
 import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.BeforeEnterObserver;
-import com.vaadin.flow.router.Menu;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
-import com.vaadin.flow.spring.data.VaadinSpringDataHelpers;
-import java.time.Duration;
-import java.util.Optional;
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
-import org.vaadin.lineawesome.LineAwesomeIconUrl;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Stream;
+
+@Route(value = "exercises", layout = MainLayout.class)
 @PageTitle("Exercises")
-@Route("exercises/:exercisesID?/:action?(edit)")
-@Menu(order = 2, icon = LineAwesomeIconUrl.COLUMNS_SOLID)
 public class ExercisesView extends Div implements BeforeEnterObserver {
 
-    private final String EXERCISES_ID = "exercisesID";
-    private final String EXERCISES_EDIT_ROUTE_TEMPLATE = "exercises/%s/edit";
-
     private final Grid<Exercises> grid = new Grid<>(Exercises.class, false);
+    private final ExercisesService exercisesService;
+    private ListDataProvider<Exercises> provider;
 
+    // Suodatinarvot
+    private String typeFilterValue = "";
+    private String distanceFilterValue = "";
+    private String durationFilterValue = "";
+    private String notesFilterValue = "";
+    private String dateFilterValue = "";
+
+    // Lomake ja binder
+    private Exercises exercises;
+    private BeanValidationBinder<Exercises> binder;
     private DateTimePicker startTime;
     private DateTimePicker endTime;
     private TextField type;
     private TextField distance;
     private TextField notes;
-
     private final Button cancel = new Button("Cancel");
-    private final Button save = new Button("Save");
-
-    private final BeanValidationBinder<Exercises> binder;
-
-    private Exercises exercises;
-
-    private final ExercisesService exercisesService;
+    private final Button save   = new Button("Save");
 
     public ExercisesView(ExercisesService exercisesService) {
         this.exercisesService = exercisesService;
-        addClassNames("exercises-view");
+        addClassName("exercises-view");
+        setSizeFull();
 
-        // Create UI
-        SplitLayout splitLayout = new SplitLayout();
+        configureGrid();
+        configureForm();
 
-        createGridLayout(splitLayout);
-        createEditorLayout(splitLayout);
+        add(grid);
+        updateList();
+    }
 
-        add(splitLayout);
+    private void configureGrid() {
+        grid.addThemeVariants(GridVariant.LUMO_COLUMN_BORDERS);
+        grid.setSizeFull();
 
-        // Configure Grid
-        grid.addColumn("startTime").setAutoWidth(true);
-        grid.addColumn("endTime").setAutoWidth(true);
-        grid.addColumn("type").setAutoWidth(true);
-        grid.addColumn("distance").setAutoWidth(true);
-        grid.addColumn("notes").setAutoWidth(true);
-        grid.setItems(query -> exercisesService.list(VaadinSpringDataHelpers.toSpringPageRequest(query)).stream());
-        grid.addThemeVariants(GridVariant.LUMO_NO_BORDER);
+        grid.addColumn(Exercises::getType)
+                .setHeader("Type")
+                .setKey("type");
+        grid.addColumn(Exercises::getDistance)
+                .setHeader("Distance")
+                .setKey("distance");
+        grid.addColumn(e -> {
+                    LocalDateTime s = e.getStartTime();
+                    LocalDateTime e2 = e.getEndTime();
+                    return (s != null && e2 != null)
+                            ? Duration.between(s, e2).toMinutes()
+                            : null;
+                })
+                .setHeader("Duration")
+                .setKey("duration");
+        grid.addColumn(Exercises::getNotes)
+                .setHeader("Notes")
+                .setKey("notes");
+        grid.addColumn(e -> {
+                    LocalDateTime s = e.getStartTime();
+                    return s != null
+                            ? s.toLocalDate().toString()
+                            : "";
+                })
+                .setHeader("Start Date")
+                .setKey("startDate");
 
-        // when a row is selected or deselected, populate form
+        // Alusta provider
+        provider = DataProvider.ofCollection(exercisesService.findAll());
+        grid.setDataProvider(provider);
+
+        // Lisää header-rivi suodattimia varten
+        HeaderRow filterRow = grid.appendHeaderRow();
+
+        // Luo tekstikentät suodattimiin
+        TextField typeFilter     = new TextField();
+        TextField distanceFilter = new TextField();
+        TextField durationFilter = new TextField();
+        TextField notesFilter    = new TextField();
+        TextField dateFilter     = new TextField();
+
+        // Asetukset
+        typeFilter.setPlaceholder("Type...");
+        distanceFilter.setPlaceholder("Distance...");
+        durationFilter.setPlaceholder("Duration...");
+        notesFilter.setPlaceholder("Notes...");
+        dateFilter.setPlaceholder("YYYY-MM-DD...");
+        for (TextField f : List.of(typeFilter, distanceFilter, durationFilter, notesFilter, dateFilter)) {
+            f.setClearButtonVisible(true);
+            f.setWidthFull();
+        }
+
+        // Kuuntelijat
+        typeFilter.addValueChangeListener(e -> {
+            typeFilterValue = e.getValue().trim().toLowerCase();
+            applyFilter();
+        });
+        distanceFilter.addValueChangeListener(e -> {
+            distanceFilterValue = e.getValue().trim().toLowerCase();
+            applyFilter();
+        });
+        durationFilter.addValueChangeListener(e -> {
+            durationFilterValue = e.getValue().trim().toLowerCase();
+            applyFilter();
+        });
+        notesFilter.addValueChangeListener(e -> {
+            notesFilterValue = e.getValue().trim().toLowerCase();
+            applyFilter();
+        });
+        dateFilter.addValueChangeListener(e -> {
+            dateFilterValue = e.getValue().trim();
+            applyFilter();
+        });
+
+        // Aseta kentät sarakkeiden päälle
+        filterRow.getCell(grid.getColumnByKey("type")).setComponent(typeFilter);
+        filterRow.getCell(grid.getColumnByKey("distance")).setComponent(distanceFilter);
+        filterRow.getCell(grid.getColumnByKey("duration")).setComponent(durationFilter);
+        filterRow.getCell(grid.getColumnByKey("notes")).setComponent(notesFilter);
+        filterRow.getCell(grid.getColumnByKey("startDate")).setComponent(dateFilter);
+
+        // Valinta avaa muokkauslomakkeen
         grid.asSingleSelect().addValueChangeListener(event -> {
-            if (event.getValue() != null) {
-                UI.getCurrent().navigate(String.format(EXERCISES_EDIT_ROUTE_TEMPLATE, event.getValue().getId()));
-            } else {
+            if (event.getValue() == null) {
                 clearForm();
-                UI.getCurrent().navigate(ExercisesView.class);
+            } else {
+                editExercise(event.getValue());
             }
         });
+    }
 
-        // Configure Form
-        binder = new BeanValidationBinder<>(Exercises.class);
-
-        // Bind fields. This is where you'd define e.g. validation rules
-        binder.forField(distance).withConverter(new StringToIntegerConverter("Only numbers are allowed"))
-                .bind("distance");
-
-        binder.bindInstanceFields(this);
-
-        cancel.addClickListener(e -> {
-            clearForm();
-            refreshGrid();
+    private void applyFilter() {
+        provider.setFilter(ex -> {
+            boolean okType = typeFilterValue.isEmpty() ||
+                    (ex.getType() != null
+                            && ex.getType().toLowerCase().contains(typeFilterValue));
+            boolean okDistance = distanceFilterValue.isEmpty() ||
+                    (ex.getDistance() != null
+                            && ex.getDistance().toString().contains(distanceFilterValue));
+            boolean okDuration = durationFilterValue.isEmpty() ||
+                    (ex.getStartTime() != null
+                            && ex.getEndTime() != null
+                            && Long.toString(Duration.between(
+                                    ex.getStartTime(), ex.getEndTime())
+                            .toMinutes()).contains(durationFilterValue));
+            boolean okNotes = notesFilterValue.isEmpty() ||
+                    (ex.getNotes() != null
+                            && ex.getNotes().toLowerCase().contains(notesFilterValue));
+            boolean okDate = dateFilterValue.isEmpty() ||
+                    (ex.getStartTime() != null
+                            && ex.getStartTime().toLocalDate().toString()
+                            .contains(dateFilterValue));
+            return okType && okDistance && okDuration && okNotes && okDate;
         });
+    }
+
+    private void updateList() {
+        provider.getItems().clear();
+        provider.getItems().addAll(exercisesService.findAll());
+        provider.refreshAll();
+    }
+
+    private void clearForm() {
+        this.exercises = null;
+        binder.readBean(null);
+    }
+
+    private void editExercise(Exercises exercise) {
+        this.exercises = exercise;
+        binder.readBean(exercise);
+    }
+
+    private void configureForm() {
+        FormLayout form = new FormLayout();
+        startTime = new DateTimePicker("Start time");
+        endTime   = new DateTimePicker("End time");
+        type      = new TextField("Type");
+        distance  = new TextField("Distance");
+        notes     = new TextField("Notes");
+
+        form.add(startTime, endTime, type, distance, notes);
+        form.setResponsiveSteps(
+                new FormLayout.ResponsiveStep("0", 1),
+                new FormLayout.ResponsiveStep("500px", 2)
+        );
+
+        HorizontalLayout buttons = new HorizontalLayout(save, cancel);
+        save.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        cancel.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
 
         save.addClickListener(e -> {
             try {
@@ -107,91 +230,29 @@ public class ExercisesView extends Div implements BeforeEnterObserver {
                 }
                 binder.writeBean(this.exercises);
                 exercisesService.save(this.exercises);
+                Notification.show("Saved successfully", 2000, Position.BOTTOM_START)
+                        .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
                 clearForm();
-                refreshGrid();
-                Notification.show("Data updated");
-                UI.getCurrent().navigate(ExercisesView.class);
-            } catch (ObjectOptimisticLockingFailureException exception) {
-                Notification n = Notification.show(
-                        "Error updating the data. Somebody else has updated the record while you were making changes.");
-                n.setPosition(Position.MIDDLE);
-                n.addThemeVariants(NotificationVariant.LUMO_ERROR);
-            } catch (ValidationException validationException) {
-                Notification.show("Failed to update the data. Check again that all values are valid");
+                updateList();
+            } catch (Exception ex) {
+                Notification.show("Saving failed: " + ex.getMessage(),
+                                3000, Position.MIDDLE)
+                        .addThemeVariants(NotificationVariant.LUMO_ERROR);
             }
         });
+        cancel.addClickListener(e -> clearForm());
+
+        binder = new BeanValidationBinder<>(Exercises.class);
+        binder.bindInstanceFields(this);
+
+        Div formLayout = new Div(form, buttons);
+        formLayout.addClassName("exercise-form");
+
+        add(formLayout);
     }
 
     @Override
     public void beforeEnter(BeforeEnterEvent event) {
-        Optional<Long> exercisesId = event.getRouteParameters().get(EXERCISES_ID).map(Long::parseLong);
-        if (exercisesId.isPresent()) {
-            Optional<Exercises> exercisesFromBackend = exercisesService.get(exercisesId.get());
-            if (exercisesFromBackend.isPresent()) {
-                populateForm(exercisesFromBackend.get());
-            } else {
-                Notification.show(String.format("The requested exercises was not found, ID = %s", exercisesId.get()),
-                        3000, Notification.Position.BOTTOM_START);
-                // when a row is selected but the data is no longer available,
-                // refresh grid
-                refreshGrid();
-                event.forwardTo(ExercisesView.class);
-            }
-        }
-    }
-
-    private void createEditorLayout(SplitLayout splitLayout) {
-        Div editorLayoutDiv = new Div();
-        editorLayoutDiv.setClassName("editor-layout");
-
-        Div editorDiv = new Div();
-        editorDiv.setClassName("editor");
-        editorLayoutDiv.add(editorDiv);
-
-        FormLayout formLayout = new FormLayout();
-        startTime = new DateTimePicker("Start Time");
-        startTime.setStep(Duration.ofSeconds(1));
-        endTime = new DateTimePicker("End Time");
-        endTime.setStep(Duration.ofSeconds(1));
-        type = new TextField("Type");
-        distance = new TextField("Distance");
-        notes = new TextField("Notes");
-        formLayout.add(startTime, endTime, type, distance, notes);
-
-        editorDiv.add(formLayout);
-        createButtonLayout(editorLayoutDiv);
-
-        splitLayout.addToSecondary(editorLayoutDiv);
-    }
-
-    private void createButtonLayout(Div editorLayoutDiv) {
-        HorizontalLayout buttonLayout = new HorizontalLayout();
-        buttonLayout.setClassName("button-layout");
-        cancel.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
-        save.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        buttonLayout.add(save, cancel);
-        editorLayoutDiv.add(buttonLayout);
-    }
-
-    private void createGridLayout(SplitLayout splitLayout) {
-        Div wrapper = new Div();
-        wrapper.setClassName("grid-wrapper");
-        splitLayout.addToPrimary(wrapper);
-        wrapper.add(grid);
-    }
-
-    private void refreshGrid() {
-        grid.select(null);
-        grid.getDataProvider().refreshAll();
-    }
-
-    private void clearForm() {
-        populateForm(null);
-    }
-
-    private void populateForm(Exercises value) {
-        this.exercises = value;
-        binder.readBean(this.exercises);
-
+        // Ei reittiparametreja
     }
 }

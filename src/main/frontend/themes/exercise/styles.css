@@ -1,3 +1,18 @@
 @import url('./main-layout.css');
 @import url('./views/home-page-view.css');
 @import url('./views/exercises-view.css');
+
+
+.header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--lumo-base-color);
+}
+.footer {
+    position: sticky;
+    bottom: 0;
+    padding: var(--lumo-space-s);
+    text-align: center;
+    background: var(--lumo-contrast-10pct);
+}

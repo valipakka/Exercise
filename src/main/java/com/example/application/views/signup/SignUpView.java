@@ -1,73 +1,78 @@
 package com.example.application.views.signup;
 
+import com.example.application.data.User;
+import com.example.application.data.UserType;
+import com.example.application.services.UserService;
 import com.vaadin.flow.component.Composite;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
-import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.html.H3;
+import com.vaadin.flow.component.html.Main;
+import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
-import com.vaadin.flow.component.orderedlayout.FlexComponent.JustifyContentMode;
-import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.EmailField;
+import com.vaadin.flow.component.textfield.PasswordField;
 import com.vaadin.flow.component.textfield.TextField;
-import com.vaadin.flow.router.Menu;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
-import com.vaadin.flow.theme.lumo.LumoUtility.Gap;
-import org.vaadin.lineawesome.LineAwesomeIconUrl;
+import com.vaadin.flow.server.auth.AnonymousAllowed;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
-@PageTitle("SignUp")
-@Route("signUp")
-@Menu(order = 1, icon = LineAwesomeIconUrl.USER)
-public class SignUpView extends Composite<VerticalLayout> {
+@PageTitle("Sign up")
+@Route("signup")
+@AnonymousAllowed
+public class SignUpView extends Composite<Main> {
 
-    public SignUpView() {
-        VerticalLayout layoutColumn2 = new VerticalLayout();
-        H3 h3 = new H3();
-        FormLayout formLayout2Col = new FormLayout();
-        TextField textField = new TextField();
-        TextField textField2 = new TextField();
-        DatePicker datePicker = new DatePicker();
-        TextField textField3 = new TextField();
-        EmailField emailField = new EmailField();
-        HorizontalLayout layoutRow = new HorizontalLayout();
-        Button buttonPrimary = new Button();
-        Button buttonSecondary = new Button();
-        getContent().setWidth("100%");
-        getContent().getStyle().set("flex-grow", "1");
-        getContent().setJustifyContentMode(JustifyContentMode.START);
-        getContent().setAlignItems(Alignment.CENTER);
-        layoutColumn2.setWidth("100%");
-        layoutColumn2.setMaxWidth("800px");
-        layoutColumn2.setHeight("min-content");
-        h3.setText("Personal Information");
-        h3.setWidth("100%");
-        formLayout2Col.setWidth("100%");
-        textField.setLabel("First Name");
-        textField2.setLabel("Last Name");
-        datePicker.setLabel("Birthday");
-        textField3.setLabel("Phone Number");
-        emailField.setLabel("Email");
-        layoutRow.addClassName(Gap.MEDIUM);
-        layoutRow.setWidth("100%");
-        layoutRow.getStyle().set("flex-grow", "1");
-        buttonPrimary.setText("Save");
-        buttonPrimary.setWidth("min-content");
-        buttonPrimary.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        buttonSecondary.setText("Cancel");
-        buttonSecondary.setWidth("min-content");
-        getContent().add(layoutColumn2);
-        layoutColumn2.add(h3);
-        layoutColumn2.add(formLayout2Col);
-        formLayout2Col.add(textField);
-        formLayout2Col.add(textField2);
-        formLayout2Col.add(datePicker);
-        formLayout2Col.add(textField3);
-        formLayout2Col.add(emailField);
-        layoutColumn2.add(layoutRow);
-        layoutRow.add(buttonPrimary);
-        layoutRow.add(buttonSecondary);
+    private final UserService userService;
+    private final PasswordEncoder passwordEncoder;
+
+    // Kentät lomakkeessa
+    private final TextField firstNameField = new TextField("First name");
+    private final TextField lastNameField  = new TextField("Last name");
+    private final EmailField emailField     = new EmailField("Email");
+    private final PasswordField passwordField = new PasswordField("Password");
+
+    public SignUpView(UserService userService,
+                      PasswordEncoder passwordEncoder) {
+        this.userService = userService;
+        this.passwordEncoder = passwordEncoder;
+
+        buildView();
+    }
+
+    private void buildView() {
+        // Otsikko
+        H3 title = new H3("Create your account");
+
+        // Form-layout
+        FormLayout form = new FormLayout();
+        form.add(firstNameField, lastNameField, emailField, passwordField);
+
+        // Rekisteröinti-nappi
+        Button register = new Button("Register", e -> {
+            User newUser = new User();
+            newUser.setFirstName(firstNameField.getValue());
+            newUser.setLastName(lastNameField.getValue());
+            newUser.setEmail(emailField.getValue());
+            newUser.setPassword(passwordEncoder.encode(passwordField.getValue()));
+            // Aina USER-oikeudella
+            newUser.setUserType(UserType.USER);
+
+            userService.save(newUser);
+
+            Notification.show("Registration successful! You can now log in.");
+            UI.getCurrent().navigate("login");
+        });
+        register.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+
+        // Layout
+        VerticalLayout layout = new VerticalLayout(title, form, register);
+        layout.setDefaultHorizontalComponentAlignment(Alignment.CENTER);
+        layout.setSizeFull();
+        layout.getStyle().set("padding", "var(--lumo-space-l)");
+        getContent().add(layout);
     }
 }

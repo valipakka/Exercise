@@ -1,85 +1,86 @@
 package com.example.application.views;
 
+import com.example.application.security.SecurityUtils;
+import com.example.application.views.exercises.MyExercisesView;
+import com.example.application.views.homepage.HomePageView;
+import com.example.application.views.login.LoginView;
+import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.applayout.AppLayout;
-import com.vaadin.flow.component.applayout.DrawerToggle;
-import com.vaadin.flow.component.html.Footer;
 import com.vaadin.flow.component.html.H1;
-import com.vaadin.flow.component.html.Header;
 import com.vaadin.flow.component.html.Span;
-import com.vaadin.flow.component.icon.SvgIcon;
-import com.vaadin.flow.component.orderedlayout.Scroller;
-import com.vaadin.flow.component.sidenav.SideNav;
-import com.vaadin.flow.component.sidenav.SideNavItem;
-import com.vaadin.flow.router.Layout;
-import com.vaadin.flow.server.auth.AnonymousAllowed;
-import com.vaadin.flow.server.menu.MenuConfiguration;
-import com.vaadin.flow.server.menu.MenuEntry;
-import com.vaadin.flow.theme.lumo.LumoUtility;
-import java.util.List;
+import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
+import com.vaadin.flow.component.orderedlayout.FlexComponent.JustifyContentMode;
+import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
+import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.router.RouterLink;
 
-/**
- * The main view is a top-level placeholder for other views.
- */
-@Layout
-@AnonymousAllowed
 public class MainLayout extends AppLayout {
 
-    private H1 viewTitle;
+    // Tämä kontti sisältää aina näkymän + footerin
+    private final VerticalLayout contentWrapper = new VerticalLayout();
+    private final HorizontalLayout footer = new HorizontalLayout();
 
     public MainLayout() {
-        setPrimarySection(Section.DRAWER);
-        addDrawerContent();
-        addHeaderContent();
+        setPrimarySection(Section.NAVBAR);
+
+        createHeader();
+        initFooter();
+
+        // Valmistele wrapper ja rekisteröi se AppLayoutin content-alueeksi
+        contentWrapper.setSizeFull();
+        contentWrapper.setPadding(false);
+        contentWrapper.setSpacing(false);
+        super.setContent(contentWrapper);
     }
 
-    private void addHeaderContent() {
-        DrawerToggle toggle = new DrawerToggle();
-        toggle.setAriaLabel("Menu toggle");
+    private void createHeader() {
+        H1 logo = new H1("Your App");
+        logo.getStyle().set("margin", "0");
 
-        viewTitle = new H1();
-        viewTitle.addClassNames(LumoUtility.FontSize.LARGE, LumoUtility.Margin.NONE);
+        HorizontalLayout header = new HorizontalLayout();
+        header.setDefaultVerticalComponentAlignment(Alignment.CENTER);
+        header.expand(logo);
+        header.setWidthFull();
+        header.add(logo,
+                new RouterLink("Home", HomePageView.class));
 
-        addToNavbar(true, toggle, viewTitle);
-    }
-
-    private void addDrawerContent() {
-        Span appName = new Span("exercise");
-        appName.addClassNames(LumoUtility.FontWeight.SEMIBOLD, LumoUtility.FontSize.LARGE);
-        Header header = new Header(appName);
-
-        Scroller scroller = new Scroller(createNavigation());
-
-        addToDrawer(header, scroller, createFooter());
-    }
-
-    private SideNav createNavigation() {
-        SideNav nav = new SideNav();
-
-        List<MenuEntry> menuEntries = MenuConfiguration.getMenuEntries();
-        menuEntries.forEach(entry -> {
-            if (entry.icon() != null) {
-                nav.addItem(new SideNavItem(entry.title(), entry.path(), new SvgIcon(entry.icon())));
-            } else {
-                nav.addItem(new SideNavItem(entry.title(), entry.path()));
+        String user = SecurityUtils.getCurrentUserEmail();
+        if (user != null) {
+            header.add(new RouterLink("My Exercises", MyExercisesView.class));
+            if (SecurityUtils.isCurrentUserAdmin()) {
+                header.add(new RouterLink("Admin", AdminUserView.class));
             }
-        });
+            // Log-out napilla tehdään aito selaimen GET /logout
+            Button logout = new Button("Log out", e ->
+                    UI.getCurrent().getPage().setLocation("/logout")
+            );
+            logout.getElement().setAttribute("router-ignore", "");
+            header.add(logout);
 
-        return nav;
+        } else {
+            header.add(new RouterLink("Login", LoginView.class));
+        }
+
+        addToNavbar(header);
     }
 
-    private Footer createFooter() {
-        Footer layout = new Footer();
-
-        return layout;
+    private void initFooter() {
+        footer.setWidthFull();
+        footer.setJustifyContentMode(JustifyContentMode.CENTER);
+        footer.getStyle().set("padding", "0.5em 0");
+        footer.getStyle().set("background", "#f0f0f0");
+        footer.add(new Span("© 2025 Your Company"));
     }
+
 
     @Override
-    protected void afterNavigation() {
-        super.afterNavigation();
-        viewTitle.setText(getCurrentPageTitle());
-    }
-
-    private String getCurrentPageTitle() {
-        return MenuConfiguration.getPageHeader(getContent()).orElse("");
+    public void setContent(Component content) {
+        contentWrapper.removeAll();
+        // Lisää ensin näkymä ja anna sen venyä täyteen tilaan
+        contentWrapper.addAndExpand(content);
+        // Ja lopuksi footer
+        contentWrapper.add(footer);
     }
 }
