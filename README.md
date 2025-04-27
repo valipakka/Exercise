@@ -1,67 +1,93 @@
-# exercise
+# Harjoitustyön Käyttöohjeet (Suomeksi)
 
-This project can be used as a starting point to create your own Vaadin application with Spring Boot.
-It contains all the necessary configuration and some placeholder files to get you started.
+Tässä ohjeet vaiheittain sovelluksen kloonaamisesta käynnistykseen ja peruskäyttöön.
 
-## Running the application
+## 1. Esivaatimukset
 
-Open the project in an IDE. You can download the [IntelliJ community edition](https://www.jetbrains.com/idea/download) if you do not have a suitable IDE already.
-Once opened in the IDE, locate the `Application` class and run the main method using "Debug".
+- **Java 21** on asennettuna (JDK 21).
+- **Maven 3.8+** on asennettuna.
+- (Vapaaehtoinen) **Docker & Docker Compose**, jos haluat ajaa kontissa.
 
-For more information on installing in various IDEs, see [how to import Vaadin projects to different IDEs](https://vaadin.com/docs/latest/getting-started/import).
+## 2. Kloonaa ja siirry projektiin
 
-If you install the Vaadin plugin for IntelliJ, you should instead launch the `Application` class using "Debug using HotswapAgent" to see updates in the Java code immediately reflected in the browser.
+1. Avaa komentorivi tai terminaali.
+2. Suorita:
+   ```bash
+   git clone <repositoryn-URL>
+   cd exercise
+   ```
 
-## Deploying to Production
+## 3. Rakenna ja käynnistä sovellus
 
-The project is a standard Maven project. To create a production build, call 
+1. Projekin juuressa (hakemistossa, jossa on `pom.xml`) aja:
+   ```bash
+   mvn clean spring-boot:run
+   ```
+2. Odota, että Maven lataa riippuvuudet ja käynnistää sovelluksen.
+3. Kun konsolissa näkyy rivi:
+   ```
+   Started Application in ... seconds
+   🔐 Admin user created: admin@example.com
+   ```
+   sovellus on käynnissä.
 
-```
-./mvnw clean package -Pproduction
-```
+## 4. Avaa selain
 
-If you have Maven globally installed, you can replace `./mvnw` with `mvn`.
+- Siirry osoitteeseen:
+  ```
+  http://localhost:8080
+  ```
+- Näet etusivun (Home).
 
-This will build a JAR file with all the dependencies and front-end resources,ready to be run. The file can be found in the `target` folder after the build completes.
-You then launch the application using 
-```
-java -jar target/exercise-1.0-SNAPSHOT.jar
-```
+## 5. Kirjautuminen ja rekisteröityminen
 
-## Project structure
+YLÄ REUNASSA ON "TOGGLE THEME" NAPPI. SILLÄ SAA VAIHDETTUA TAUSTAVÄRIN. EN SAANUT FONTTIA VAIHTUMAAN.
 
-- `MainLayout.java` in `src/main/java` contains the navigation setup (i.e., the
-  side/top bar and the main menu). This setup uses
-  [App Layout](https://vaadin.com/docs/components/app-layout).
-- `views` package in `src/main/java` contains the server-side Java views of your application.
-- `views` folder in `src/main/frontend` contains the client-side JavaScript views of your application.
-- `themes` folder in `src/main/frontend` contains the custom CSS styles.
+1. Päävalikosta (header) klikkaa **Login**, jos et ole vielä kirjautuneena.
+2. Olemassa olevat käyttäjät:
+   - **Admin**
+     - Sähköposti: `admin@example.com`
+     - Salasana: `admin`
+   - **User**
+     - Luo oma käyttäjä **Sign up** -napista.
+3. Kirjautumisen jälkeen headeriin ilmestyy **My Exercises** ja **Log out**.
 
-## Useful links
+## 6. Harjoitusten hallinta (My Exercises)
 
-- Read the documentation at [vaadin.com/docs](https://vaadin.com/docs).
-- Follow the tutorial at [vaadin.com/docs/latest/tutorial/overview](https://vaadin.com/docs/latest/tutorial/overview).
-- Create new projects at [start.vaadin.com](https://start.vaadin.com/).
-- Search UI components and their usage examples at [vaadin.com/docs/latest/components](https://vaadin.com/docs/latest/components).
-- View use case applications that demonstrate Vaadin capabilities at [vaadin.com/examples-and-demos](https://vaadin.com/examples-and-demos).
-- Build any UI without custom CSS by discovering Vaadin's set of [CSS utility classes](https://vaadin.com/docs/styling/lumo/utility-classes). 
-- Find a collection of solutions to common use cases at [cookbook.vaadin.com](https://cookbook.vaadin.com/).
-- Find add-ons at [vaadin.com/directory](https://vaadin.com/directory).
-- Ask questions on [Stack Overflow](https://stackoverflow.com/questions/tagged/vaadin) or join our [Forum](https://vaadin.com/forum).
-- Report issues, create pull requests in [GitHub](https://github.com/vaadin).
+1. Klikkaa **My Exercises**.
+2. Näet listan omista harjoituksistasi.
+3. Voit suodattaa rivejä:
+   - Tyyppi (Type)
+   - Etäisyys (Distance)
+   - Muistiinpanot (Notes)
+   - Aloitusaika (Start Time)
+4. Lisätäksesi uuden harjoituksen klikkaa **Add New**, täytä tiedot ja paina **Save**.
+5. Muokkaa tai poista harjoituksia klikkaamalla rivin tietoja.
 
+## 7. Admin-näkymä
 
-## Deploying using Docker
+- Jos olet **Admin**, headerissä näkyy myös **Admin**.
+- Klikkaamalla Admin pääset hallinnoimaan käyttäjiä.
 
-To build the Dockerized version of the project, run
+## 8. Uloskirjautuminen
 
-```
-mvn clean package -Pproduction
-docker build . -t exercise:latest
-```
+- Klikkaa **Log out** headerissa.
+- Sovellus ohjaa takaisin etusivulle ja header näyttää taas **Login**.
 
-Once the Docker image is correctly built, you can test it locally using
+## 9. H2-konsoli
 
-```
-docker run -p 8080:8080 exercise:latest
-```
+1. Avaa selaimessa:
+   ```
+   http://localhost:8080/h2-console
+   ```
+2. JDBC URL on `jdbc:h2:mem:…` (automaattinen). Kirjaudu käyttäjällä `SA` ilman salasanaa.
+
+## 10. Itsearviointi
+En valitettavasti antanut tälle kurssille tarpeeksi aikaa, jotta olisin voinut panostaa tähän kunnolla. Jouduin käyttämään GitHubin copilottia paljon, että sain tehtävän tehtyä, koska en kerennyt osallistua tunneille ja tallenteiden katsominen meni ajatukset muualla. Luulen onnistuneeni täyttämään arvostelukategorioissa seuraavasti
+1. 3 pistettä. Minulla on myös muokkaus ja poisto mutta 4 kohta jäi suorittamatta.
+2. 4 pistettä. Viides ehto oli jo olemassa, mutta ajan puutteen ja sen tuomien ongelmien takia jouduin poistamaan sen.
+3. En ole varma mitä tästä saan. Tämä jäi tausta ajatukseksia jonka muistin vasta kun olin jo palauttamassa tehtävää.
+4. 5 pistettä. Tämän sain mielestäni täysin valmiiksi.
+5. 4 pistettä. Tämä oli alue joka tuotti minulle suurimmat vaikeudet. En ole vieläkään varma miten sain tämän loppujen lopuksi toimimaan.
+6. 2 pistettä. Git ja salasanan salaus. Jälkimmäisestä en ole varma, mutta luulen onnistuneeni siinä.
+
