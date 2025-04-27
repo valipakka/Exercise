@@ -16,3 +16,24 @@
     text-align: center;
     background: var(--lumo-contrast-10pct);
 }
+.app-footer {
+    background-color: #dddddd;
+    color: #333333;
+}
+
+
+/* Dark mode */
+body[theme="dark"] {
+    --lumo-base-color: hsl(214, 35%, 21%);
+    --lumo-tint-5pct: hsla(214, 65%, 85%, 0.06);
+    --lumo-contrast: hsl(214, 15%, 85%);
+    color: #ffffff !important; /* Ensure light font color for dark mode */
+}
+
+/* Light mode (default) */
+body {
+    --lumo-base-color: #ffffff;
+    --lumo-tint-5pct: rgba(0, 0, 0, 0.05);
+    --lumo-contrast: #000000;
+    color: #000000 !important; /* Ensure dark font color for light mode */
+}

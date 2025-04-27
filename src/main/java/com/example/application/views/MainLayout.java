@@ -15,6 +15,7 @@ import com.vaadin.flow.component.orderedlayout.FlexComponent.JustifyContentMode;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.RouterLink;
+import com.vaadin.flow.theme.lumo.Lumo;
 
 public class MainLayout extends AppLayout {
 
@@ -43,8 +44,7 @@ public class MainLayout extends AppLayout {
         header.setDefaultVerticalComponentAlignment(Alignment.CENTER);
         header.expand(logo);
         header.setWidthFull();
-        header.add(logo,
-                new RouterLink("Home", HomePageView.class));
+        header.add(logo, new RouterLink("Home", HomePageView.class));
 
         String user = SecurityUtils.getCurrentUserEmail();
         if (user != null) {
@@ -52,21 +52,32 @@ public class MainLayout extends AppLayout {
             if (SecurityUtils.isCurrentUserAdmin()) {
                 header.add(new RouterLink("Admin", AdminUserView.class));
             }
-            // Log-out napilla tehdään aito selaimen GET /logout
             Button logout = new Button("Log out", e ->
                     UI.getCurrent().getPage().setLocation("/logout")
             );
             logout.getElement().setAttribute("router-ignore", "");
             header.add(logout);
-
         } else {
             header.add(new RouterLink("Login", LoginView.class));
         }
+
+        // Add dark mode toggle button
+        Button toggleThemeButton = new Button("Toggle Theme", e -> {
+            if (UI.getCurrent().getElement().getThemeList().contains(Lumo.DARK)) {
+                UI.getCurrent().getElement().getThemeList().remove(Lumo.DARK);
+                UI.getCurrent().getPage().executeJs("document.body.removeAttribute('theme')");
+            } else {
+                UI.getCurrent().getElement().getThemeList().add(Lumo.DARK);
+                UI.getCurrent().getPage().executeJs("document.body.setAttribute('theme', 'dark')");
+            }
+        });
+        header.add(toggleThemeButton);
 
         addToNavbar(header);
     }
 
     private void initFooter() {
+        footer.addClassName("app-footer");
         footer.setWidthFull();
         footer.setJustifyContentMode(JustifyContentMode.CENTER);
         footer.getStyle().set("padding", "0.5em 0");
